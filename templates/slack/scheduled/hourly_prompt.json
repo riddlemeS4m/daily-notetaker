@@ -1,0 +1,12 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "*Hey! What are you up to?* :wave:\nJust reply to this message and I'll log it for you."
+    }
+  },
+  {
+    "type": "divider"
+  }
+]
