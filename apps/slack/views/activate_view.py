@@ -23,9 +23,9 @@ class ActivateView(View):
     def post(self, request, *args, **kwargs):
         slack_user_id = request.POST.get("user_id")
         team_id = request.POST.get("team_id")
-        text = request.POST.get("text", "").strip().lower()
+        mode = ChatMode.parse(request.POST.get("text", ""))
 
-        if text not in ChatMode.values:
+        if mode is None:
             return JsonResponse(
                 {
                     "response_type": "ephemeral",
@@ -45,7 +45,7 @@ class ActivateView(View):
                 metadata={"team_id": team_id},
             )
 
-        user.chat_mode = text
+        user.chat_mode = mode
         user.opted_in_at = timezone.now()
         user.opted_out_at = None
         user.save(
@@ -55,6 +55,6 @@ class ActivateView(View):
         return JsonResponse(
             {
                 "response_type": "ephemeral",
-                "text": f"You're all set! Check-ins are active in *{text}* mode.",
+                "text": f"You're all set! Check-ins are active in *{mode}* mode.",
             }
         )
