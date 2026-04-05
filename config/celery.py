@@ -20,4 +20,8 @@ app.conf.beat_schedule = {
         "task": "apps.scheduled.tasks.expire_stale_sessions",
         "schedule": crontab(minute=30),
     },
+    "close-end-of-day-sessions": {
+        "task": "apps.core.tasks.close_end_of_day_sessions",
+        "schedule": crontab(hour=8, minute=0),
+    },
 }

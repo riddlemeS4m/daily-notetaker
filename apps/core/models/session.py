@@ -25,5 +25,15 @@ class Session(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @classmethod
+    def close_all_open(cls, user, chat_mode=None):
+        qs = cls.objects.filter(
+            user=user,
+            status__in=[cls.Status.ACTIVE, cls.Status.AWAITING_RESPONSE],
+        )
+        if chat_mode:
+            qs = qs.filter(chat_mode=chat_mode)
+        return qs.update(status=cls.Status.CLOSED)
+
     def __str__(self):
         return f"Session({self.user}, {self.chat_mode}, {self.status})"

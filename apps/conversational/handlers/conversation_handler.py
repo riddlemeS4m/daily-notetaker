@@ -21,7 +21,8 @@ class ConversationHandler(SessionHandler):
         """
         Handle an inbound user message.
         Looks up or opens a session, records the message, generates
-        and dispatches a reply.
+        and dispatches a reply. Closes the session when the LLM
+        signals the conversation is complete.
         """
         if not user.is_opted_in:
             logger.debug("Ignoring message from user %s — not opted in", user.id)
@@ -36,9 +37,17 @@ class ConversationHandler(SessionHandler):
         session = self._get_or_open_session(user)
         self.write_message(session, role=Message.Role.USER, content=content)
 
-        reply = self.llm_service.generate(session=session, user_message=content)
-        self.write_message(session, role=Message.Role.BOT, content=reply)
-        self.notification_service.send_reply(user, text=reply)
+        result = self.llm_service.generate(session=session)
+        self.write_message(
+            session,
+            role=Message.Role.BOT,
+            content=result.message,
+            metadata={"categories_covered": result.categories_covered},
+        )
+        self.notification_service.send_reply(user, text=result.message)
+
+        if result.conversation_complete:
+            self.close_session(session)
 
         logger.info(
             "Conversational reply sent to user %s (session %s)", user.id, session.id

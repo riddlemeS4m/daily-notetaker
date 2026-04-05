@@ -6,6 +6,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.constants import ChatMode
+from apps.core.models import Session
 from apps.slack.models import SlackIntegration
 
 logger = logging.getLogger(__name__)
@@ -49,8 +50,11 @@ class ModeView(View):
                 }
             )
 
+        old_mode = user.chat_mode
         user.chat_mode = mode
         user.save(update_fields=["chat_mode", "updated_at"])
+
+        Session.close_all_open(user, chat_mode=old_mode)
 
         return JsonResponse(
             {

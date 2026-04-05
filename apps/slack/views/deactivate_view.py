@@ -6,6 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from apps.core.models import Session
 from apps.slack.models import SlackIntegration
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ class DeactivateView(View):
 
         user.opted_out_at = timezone.now()
         user.save(update_fields=["opted_out_at", "updated_at"])
+
+        Session.close_all_open(user)
 
         return JsonResponse(
             {

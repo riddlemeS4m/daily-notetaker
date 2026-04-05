@@ -24,7 +24,7 @@ class ScheduleHandler(SessionHandler):
     def handle(self, user: User) -> None:
         """
         Celery beat entry point for a scheduled prompt cycle.
-        Skips if the user is on DND or already has an open session.
+        Closes any stale scheduled session before dispatching a new prompt.
         """
         if not user.is_opted_in:
             logger.debug("Skipping user %s — not opted in", user.id)
@@ -38,9 +38,7 @@ class ScheduleHandler(SessionHandler):
             logger.debug("Skipping user %s — DND active", user.id)
             return
 
-        if self._has_open_session(user):
-            logger.debug("Skipping user %s — open session exists", user.id)
-            return
+        Session.close_all_open(user, chat_mode=ChatMode.SCHEDULED)
 
         session = self.open_session(user, chat_mode=ChatMode.SCHEDULED)
         self.dispatch(user, session, self.PROMPT_TEMPLATE_KEY)
@@ -61,9 +59,14 @@ class ScheduleHandler(SessionHandler):
         self.write_message(session, role=Message.Role.USER, content=content)
 
         if self.llm_service:
-            reply = self.llm_service.generate(session=session, user_message=content)
-            self.write_message(session, role=Message.Role.BOT, content=reply)
-            self.notification_service.send_reply(user, text=reply)
+            result = self.llm_service.generate(session=session)
+            self.write_message(
+                session,
+                role=Message.Role.BOT,
+                content=result.message,
+                metadata={"categories_covered": result.categories_covered},
+            )
+            self.notification_service.send_reply(user, text=result.message)
 
         self.close_session(session)
         logger.info(
@@ -87,13 +90,6 @@ class ScheduleHandler(SessionHandler):
         count = stale.count()
         stale.update(status=Session.Status.CLOSED)
         logger.info("Expired %s stale scheduled session(s)", count)
-
-    def _has_open_session(self, user: User) -> bool:
-        return Session.objects.filter(
-            user=user,
-            chat_mode=ChatMode.SCHEDULED,
-            status__in=[Session.Status.ACTIVE, Session.Status.AWAITING_RESPONSE],
-        ).exists()
 
     def _get_open_session(self, user: User) -> Session | None:
         return Session.objects.filter(

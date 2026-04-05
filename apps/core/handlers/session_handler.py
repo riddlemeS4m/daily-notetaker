@@ -60,6 +60,7 @@ class SessionHandler(ABC):
         role: str,
         content: str,
         template_key: str = None,
+        metadata: dict = None,
     ) -> Message:
         """Persist a Message to the given Session."""
         return Message.objects.create(
@@ -67,6 +68,7 @@ class SessionHandler(ABC):
             role=role,
             content=content,
             template_key=template_key,
+            metadata=metadata or {},
         )
 
     def dispatch(self, user: User, session: Session, template_key: str) -> None:

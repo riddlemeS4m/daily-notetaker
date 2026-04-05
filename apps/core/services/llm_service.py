@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
 from apps.core.models import Session
 
@@ -9,19 +12,24 @@ class LLMService(ABC):
     Concrete implementations handle vendor-specific API details.
     """
 
+    @dataclass
+    class GenerateResult:
+        message: str
+        categories_covered: list[str] = field(default_factory=list)
+        conversation_complete: bool = False
+
     @abstractmethod
-    def generate(self, session: Session, user_message: str) -> str:
+    def generate(self, session: Session) -> LLMService.GenerateResult:
         """
-        Generate a reply given the current session and latest user message.
+        Generate a reply given the current session.
 
         Implementations should build conversation history from
         session.messages and call the underlying LLM API.
 
         Args:
             session: The active Session (provides message history).
-            user_message: The latest inbound message from the user.
 
         Returns:
-            The generated reply text.
+            A GenerateResult containing the reply and structured metadata.
         """
         raise NotImplementedError

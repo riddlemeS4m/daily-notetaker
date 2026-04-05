@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -28,21 +29,27 @@ class OpenAILLMService(LLMService):
         self.model = model
         self.system_prompt = SYSTEM_PROMPT_PATH.read_text().strip()
 
-    def generate(self, session: Session, user_message: str) -> str:
-        messages = self._build_messages(session, user_message)
+    def generate(self, session: Session) -> LLMService.GenerateResult:
+        messages = self._build_messages(session)
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
+                response_format={"type": "json_object"},
             )
-            return response.choices[0].message.content
+            raw = json.loads(response.choices[0].message.content)
+            return self.GenerateResult(
+                message=raw["message"],
+                categories_covered=raw.get("categories_covered", []),
+                conversation_complete=raw.get("conversation_complete", False),
+            )
         except APIError as e:
             logger.error(
                 "OpenAI API error for session %s: %s", session.id, e,
             )
             raise
 
-    def _build_messages(self, session: Session, user_message: str) -> list[dict]:
+    def _build_messages(self, session: Session) -> list[dict]:
         messages = [{"role": "system", "content": self.system_prompt}]
 
         for msg in session.messages.order_by("created_at"):
@@ -50,5 +57,4 @@ class OpenAILLMService(LLMService):
             if role:
                 messages.append({"role": role, "content": msg.content})
 
-        messages.append({"role": "user", "content": user_message})
         return messages

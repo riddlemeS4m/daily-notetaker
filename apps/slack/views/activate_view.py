@@ -7,6 +7,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.constants import ChatMode
+from apps.core.models import Session
 from apps.slack.models import SlackIntegration
 from apps.users.models import User
 
@@ -44,6 +45,8 @@ class ActivateView(View):
                 external_id=slack_user_id,
                 metadata={"team_id": team_id},
             )
+
+        Session.close_all_open(user)
 
         user.chat_mode = mode
         user.opted_in_at = timezone.now()
