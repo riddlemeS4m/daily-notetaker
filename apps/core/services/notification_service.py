@@ -8,6 +8,21 @@ class NotificationService(ABC):
     """
 
     @abstractmethod
+    def resolve_context(self, user) -> dict:
+        """
+        Resolve the delivery context for a user.
+
+        Returns a dict of vendor-specific delivery parameters needed to
+        reach the user in the correct context. At minimum includes the
+        target address (e.g. channel, email, etc.).
+
+        Today every implementation returns a single-context default.
+        When multi-context support lands, this method will accept
+        additional arguments to select the right context.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def send_prompt(self, user, template_key: str) -> None:
         """
         Send a bot-initiated prompt to a user, rendered from a template.

@@ -36,15 +36,21 @@ class SlackNotificationService(NotificationService):
             logger.error("Failed to fetch DND status for user %s: %s", user.id, e)
             return False
 
+    def resolve_context(self, user: User) -> dict:
+        integration = SlackIntegration.for_user(user)
+        return {
+            "channel": integration.slack_user_id,
+        }
+
     def send_prompt(self, user: User, template_key: str) -> None:
         """
         Send a templated Block Kit message to the user's Slack DM.
         """
-        integration = SlackIntegration.for_user(user)
+        context = self.resolve_context(user)
         blocks = MessageTemplate.load(template_key)
         try:
             self.client.chat_postMessage(
-                channel=integration.slack_user_id,
+                channel=context["channel"],
                 text=self.FALLBACK_TEXT,
                 blocks=blocks,
             )
@@ -57,10 +63,10 @@ class SlackNotificationService(NotificationService):
         Send a plain-text message to the user's Slack DM.
         Used for dynamic content that doesn't come from a template.
         """
-        integration = SlackIntegration.for_user(user)
+        context = self.resolve_context(user)
         try:
             self.client.chat_postMessage(
-                channel=integration.slack_user_id,
+                channel=context["channel"],
                 text=text,
             )
         except SlackApiError as e:
