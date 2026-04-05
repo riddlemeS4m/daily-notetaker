@@ -59,6 +59,12 @@ class ScheduleHandler(SessionHandler):
             return
 
         self.write_message(session, role=Message.Role.USER, content=content)
+
+        if self.llm_service:
+            reply = self.llm_service.generate(session=session, user_message=content)
+            self.write_message(session, role=Message.Role.BOT, content=reply)
+            self.notification_service.send_reply(user, text=reply)
+
         self.close_session(session)
         logger.info(
             "Response recorded and session %s closed for user %s",

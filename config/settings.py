@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "apps.scheduled",
     "apps.conversational",
     "apps.slack",
+    "apps.openai",
 ]
 
 MIDDLEWARE = [
@@ -102,6 +103,10 @@ PROMPT_INTERVAL_HOURS = env.float("PROMPT_INTERVAL_HOURS", default=1.0)
 # Slack
 SLACK_BOT_TOKEN = env.str("SLACK_BOT_TOKEN")
 SLACK_SIGNING_SECRET = env.str("SLACK_SIGNING_SECRET")
+
+# LLM
+OPENAI_API_KEY = env.str("OPENAI_API_KEY")
+OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-4o-mini")
 
 
 # Password validation

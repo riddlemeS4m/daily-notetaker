@@ -1,21 +1,27 @@
-import logging
+from abc import ABC, abstractmethod
 
 from apps.core.models import Session
 
-logger = logging.getLogger(__name__)
 
-
-class LLMService:
+class LLMService(ABC):
     """
-    Stub for future LLM API integration.
-    Returns a placeholder reply until wired to an external API.
+    Abstract base class for all LLM vendor integrations.
+    Concrete implementations handle vendor-specific API details.
     """
 
+    @abstractmethod
     def generate(self, session: Session, user_message: str) -> str:
         """
         Generate a reply given the current session and latest user message.
-        In future: builds message history from session.messages.all()
-        and calls an LLM API.
+
+        Implementations should build conversation history from
+        session.messages and call the underlying LLM API.
+
+        Args:
+            session: The active Session (provides message history).
+            user_message: The latest inbound message from the user.
+
+        Returns:
+            The generated reply text.
         """
-        logger.debug("LLMService.generate called (stub) for session %s", session.id)
-        return "Got it — I've recorded your update."
+        raise NotImplementedError

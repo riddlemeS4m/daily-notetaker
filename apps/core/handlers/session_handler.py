@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from apps.core.models import Message, Session
-from apps.core.services import NotificationService
+from apps.core.services import LLMService, NotificationService
 from apps.users.models import User
 
 
@@ -33,8 +33,13 @@ class SessionHandler(ABC):
             raise ValueError(f"No handler registered for chat mode: {chat_mode}")
         return handler_cls(**kwargs)
 
-    def __init__(self, notification_service: NotificationService):
+    def __init__(
+        self,
+        notification_service: NotificationService,
+        llm_service: LLMService = None,
+    ):
         self.notification_service = notification_service
+        self.llm_service = llm_service
 
     def open_session(self, user: User, chat_mode: str) -> Session:
         """Create and persist a new Session for the user."""

@@ -3,7 +3,6 @@ import logging
 from apps.core.constants import ChatMode
 from apps.core.handlers import SessionHandler
 from apps.core.models import Message, Session
-from apps.core.services import LLMService
 from apps.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -17,10 +16,6 @@ class ConversationHandler(SessionHandler):
     """
 
     CHAT_MODE = ChatMode.CONVERSATIONAL
-
-    def __init__(self, notification_service, llm_service: LLMService = None):
-        super().__init__(notification_service)
-        self.llm_service = llm_service or LLMService()
 
     def handle_inbound(self, user: User, content: str) -> None:
         """
