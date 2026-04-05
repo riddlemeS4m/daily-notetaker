@@ -10,12 +10,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+VAULT_ENABLED = os.getenv("VAULT_ENABLED", "false").lower() == "true"
+if VAULT_ENABLED:
+    from config.vault_client import load_vault_secrets
+
+    load_vault_secrets()
 
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")

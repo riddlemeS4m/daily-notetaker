@@ -14,6 +14,7 @@ Django==6.0.3
 django-environ==0.13.0
 gunicorn==25.3.0
 h11==0.16.0
+hvac==2.4.0
 httpcore==1.0.9
 httpx==0.28.1
 idna==3.11
