@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 env:
-  DEPLOY_HOST: ubuntu-4gb-ash-1
   DEPLOY_USER: deploy
   COMPOSE_FILE: /opt/dailynotetaker/docker-compose.yml
 
@@ -24,13 +23,9 @@ jobs:
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Resolve server IP via Tailscale
-        id: resolve
-        run: echo "ip=$(tailscale ip -4 ${{ env.DEPLOY_HOST }})" >> "$GITHUB_OUTPUT"
-
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ steps.resolve.outputs.ip }} << 'EOF'
+          ssh -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} << 'EOF'
           set -e
           sudo docker compose -f /opt/dailynotetaker/docker-compose.yml pull
           sudo docker compose -f /opt/dailynotetaker/docker-compose.yml run --rm --no-deps web python manage.py migrate --noinput
