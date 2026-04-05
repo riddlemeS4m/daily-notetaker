@@ -1,0 +1,52 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Create Release"]
+    types: [completed]
+  workflow_dispatch:
+
+env:
+  DEPLOY_HOST: ubuntu-4gb-ash-1
+  DEPLOY_USER: deploy
+  COMPOSE_FILE: /opt/dailynotetaker/docker-compose.yml
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'EOF'
+          set -e
+          sudo docker compose -f /opt/dailynotetaker/docker-compose.yml pull
+          sudo docker compose -f /opt/dailynotetaker/docker-compose.yml run --rm --no-deps web python manage.py migrate --noinput
+          sudo docker compose -f /opt/dailynotetaker/docker-compose.yml up -d
+          EOF
+
+      - name: Clear Cloudflare cache
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${{ vars.CLOUDFLARE_ZONE_ID }}/purge_cache" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"purge_everything": true}')
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Cloudflare cache purge failed (HTTP $http_code): $body"
+            exit 1
+          fi
+
+          echo "Cache purge successful"
