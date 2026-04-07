@@ -47,7 +47,8 @@ class ScheduleHandler(SessionHandler):
     def handle_inbound(self, user: User, content: str) -> None:
         """
         Handle an inbound response to a scheduled prompt.
-        Records the message and closes the session.
+        Records the message, generates a reply, and keeps the session
+        open until the LLM signals the conversation is complete.
         """
         session = self._get_open_session(user)
         if session is None:
@@ -68,12 +69,20 @@ class ScheduleHandler(SessionHandler):
             )
             self.notification_service.send_reply(user, text=result.message)
 
-        self.close_session(session)
-        logger.info(
-            "Response recorded and session %s closed for user %s",
-            session.id,
-            user.id,
-        )
+            if result.conversation_complete:
+                self.close_session(session)
+                logger.info(
+                    "Session %s closed for user %s", session.id, user.id
+                )
+            else:
+                logger.info(
+                    "Session %s still active for user %s", session.id, user.id
+                )
+        else:
+            self.close_session(session)
+            logger.info(
+                "Session %s closed (no LLM) for user %s", session.id, user.id
+            )
 
     @classmethod
     def expire_stale_sessions(cls) -> None:
@@ -84,7 +93,7 @@ class ScheduleHandler(SessionHandler):
         cutoff = timezone.now() - timedelta(hours=cls.RESPONSE_WINDOW_HOURS)
         stale = Session.objects.filter(
             chat_mode=ChatMode.SCHEDULED,
-            status=Session.Status.AWAITING_RESPONSE,
+            status__in=[Session.Status.ACTIVE, Session.Status.AWAITING_RESPONSE],
             updated_at__lt=cutoff,
         )
         count = stale.count()
@@ -95,5 +104,5 @@ class ScheduleHandler(SessionHandler):
         return Session.objects.filter(
             user=user,
             chat_mode=ChatMode.SCHEDULED,
-            status=Session.Status.AWAITING_RESPONSE,
+            status__in=[Session.Status.ACTIVE, Session.Status.AWAITING_RESPONSE],
         ).first()
