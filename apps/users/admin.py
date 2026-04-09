@@ -12,9 +12,9 @@ class UserIntegrationInline(admin.TabularInline):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("username", "email", "chat_mode", "is_opted_in", "created_at")
+    list_display = ("username", "first_name", "last_name", "email", "chat_mode", "is_opted_in", "created_at")
     list_filter = ("chat_mode", "is_staff", "is_active")
-    search_fields = ("username", "email")
+    search_fields = ("username", "first_name", "last_name", "email")
     readonly_fields = ("created_at", "updated_at")
     inlines = [UserIntegrationInline]
     fieldsets = BaseUserAdmin.fieldsets + (
