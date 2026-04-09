@@ -39,8 +39,8 @@ class ScheduleHandler(SessionHandler):
             result = self.generate_and_reply(user, session)
             if result.conversation_complete:
                 session.close()
-        else:
-            session.close()
+            else:
+                session.mark_awaiting()
 
     def dispatch_scheduled_prompt(self, user: User) -> None:
         """
