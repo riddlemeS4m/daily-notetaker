@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "You're all set! Check-ins are active in *$mode* mode."
+    }
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Check-ins paused. Use `/activate <mode>` to resume."
+    }
+  }
+]
