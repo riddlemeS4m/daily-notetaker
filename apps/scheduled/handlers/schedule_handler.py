@@ -36,9 +36,11 @@ class ScheduleHandler(SessionHandler):
         session.add_message(role=Message.Role.USER, content=content)
 
         if self.llm_service:
-            self.generate_and_reply(user, session)
-
-        session.close()
+            result = self.generate_and_reply(user, session)
+            if result.conversation_complete:
+                session.close()
+        else:
+            session.close()
 
     def dispatch_scheduled_prompt(self, user: User) -> None:
         """
