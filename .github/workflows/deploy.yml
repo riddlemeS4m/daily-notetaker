@@ -25,11 +25,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          echo "Tailscale status:"
-          tailscale status
-          echo "Pinging server:"
-          tailscale ping ${{ secrets.TAILSCALE_SERVER_IP }}
-          ssh -v -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=accept-new ${{ env.DEPLOY_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} << 'EOF'
           set -e
           sudo docker compose -f ${{ env.COMPOSE_FILE }} pull
           sudo docker compose -f ${{ env.COMPOSE_FILE }} run --rm --no-deps web python manage.py migrate --noinput
