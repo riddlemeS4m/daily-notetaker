@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def dispatch_scheduled_prompts():
     """
     Fetch all opted-in scheduled-mode users and dispatch a prompt to each.
-    Skips users on DND or with an existing open session (handled in ScheduleHandler).
+    Skips users with an existing open session (handled in ScheduleHandler).
     """
     service = SlackNotificationService(token=settings.SLACK_BOT_TOKEN)
     handler = ScheduleHandler(notification_service=service)
@@ -27,7 +27,7 @@ def dispatch_scheduled_prompts():
     )
     for user in users:
         try:
-            handler.handle(user)
+            handler.dispatch_scheduled_prompt(user)
         except Exception as e:
             logger.error("Error dispatching prompt for user %s: %s", user.id, e)
 
