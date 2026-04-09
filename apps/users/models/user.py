@@ -22,6 +22,14 @@ class User(AbstractUser):
     def is_opted_in(self):
         return self.opted_in_at is not None and self.opted_out_at is None
 
+    @property
+    def respect_dnd(self) -> bool:
+        return self.metadata.get("dnd", "on") == "on"
+
+    def set_dnd(self, value: str) -> None:
+        self.metadata["dnd"] = value
+        self.save(update_fields=["metadata", "updated_at"])
+
     def activate(self, mode: str) -> None:
         self.chat_mode = mode
         self.opted_in_at = timezone.now()

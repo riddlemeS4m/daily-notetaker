@@ -28,6 +28,24 @@ class SlackIntegration(UserIntegration):
     def team_id(self) -> str | None:
         return self.metadata.get("team_id")
 
+    @property
+    def schedule_start(self) -> int | None:
+        val = self.metadata.get("schedule_start")
+        return int(val) if val is not None else None
+
+    @property
+    def schedule_end(self) -> int | None:
+        val = self.metadata.get("schedule_end")
+        return int(val) if val is not None else None
+
+    def set_schedule_start(self, hour: int) -> None:
+        self.metadata["schedule_start"] = hour
+        self.save(update_fields=["metadata", "updated_at"])
+
+    def set_schedule_end(self, hour: int) -> None:
+        self.metadata["schedule_end"] = hour
+        self.save(update_fields=["metadata", "updated_at"])
+
     @classmethod
     def for_user(cls, user: User) -> SlackIntegration:
         """Fetch the SlackIntegration for a given User, or raise DoesNotExist."""

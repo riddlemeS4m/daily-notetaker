@@ -188,6 +188,19 @@ Good uses of logging:
 
 ---
 
+## Avoid module-level constants for configuration
+
+Do not use module-level constants (e.g. in `constants.py`) for values
+that configure application behaviour. These belong in `settings.py` as
+environment-backed variables so they can vary across environments.
+
+`constants.py` is reserved for structural enums and choices (e.g.
+`ChatMode`). For behavioural defaults, use `settings.SOME_VALUE`.
+When a class needs a fixed value that is not environment-dependent,
+use a class attribute instead of a module constant.
+
+---
+
 ## Type annotations
 
 - Use `X | None` union syntax (not `Optional[X]`).

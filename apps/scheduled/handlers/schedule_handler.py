@@ -1,6 +1,7 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import override
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.utils import timezone
@@ -40,11 +41,40 @@ class ScheduleHandler(SessionHandler):
 
         session.close()
 
+    def is_within_schedule(self, user: User) -> bool:
+        """
+        Check whether the current time in the user's local timezone
+        falls within their schedule window [start, end).
+        """
+        tz_name = self.notification_service.resolve_timezone(user)
+        overrides = self.notification_service.resolve_schedule(user)
+        start = overrides.get("schedule_start", settings.SCHEDULE_START_HOUR)
+        end = overrides.get("schedule_end", settings.SCHEDULE_END_HOUR)
+        user_hour = datetime.now(ZoneInfo(tz_name)).hour
+        return start <= user_hour < end
+
+    def is_dnd_blocked(self, user: User) -> bool:
+        """
+        Check whether the user should be blocked from receiving a prompt
+        due to Do Not Disturb. Returns False (not blocked) if the user
+        has opted out of DND respect.
+        """
+        if not user.respect_dnd:
+            return False
+        return self.notification_service.is_dnd_active(user)
+
     def dispatch_scheduled_prompt(self, user: User) -> None:
         """
         Celery beat entry point for a scheduled prompt cycle.
-        Closes any stale scheduled session before dispatching a new prompt.
+        Checks delivery rules, then closes any stale scheduled session
+        before dispatching a new prompt.
         """
+        if self.is_dnd_blocked(user):
+            return
+
+        if not self.is_within_schedule(user):
+            return
+
         Session.close_all_open(user, chat_mode=ChatMode.SCHEDULED)
 
         session = Session.open(user, chat_mode=ChatMode.SCHEDULED)

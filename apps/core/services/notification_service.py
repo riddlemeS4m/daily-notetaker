@@ -91,3 +91,32 @@ class NotificationService(ABC):
             }
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def is_dnd_active(self, user: User) -> bool:
+        """
+        Check whether the vendor indicates the user is currently in
+        Do Not Disturb mode (scheduled or manual).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_timezone(self, user: User) -> str:
+        """
+        Return the user's IANA timezone string (e.g. "America/New_York")
+        as reported by the vendor. Should be fetched live — users may
+        travel and change timezones between dispatch cycles.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_schedule(self, user: User) -> dict[str, Any]:
+        """
+        Return vendor-side schedule configuration overrides stored on
+        the user's integration.
+
+        Recognised keys (absent means "use application default"):
+            - schedule_start: int  (hour 0-23)
+            - schedule_end:   int  (hour 0-23)
+        """
+        raise NotImplementedError

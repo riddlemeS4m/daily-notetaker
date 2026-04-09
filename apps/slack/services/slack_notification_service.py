@@ -1,3 +1,4 @@
+import time
 from typing import Any, override
 
 from slack_sdk import WebClient
@@ -84,3 +85,30 @@ class SlackNotificationService(NotificationService):
             "external_id": event.get("user"),
             "content": event.get("text", "").strip(),
         }
+
+    @override
+    def is_dnd_active(self, user: User) -> bool:
+        integration = SlackIntegration.for_user(user)
+        resp = self.client.dnd_info(user=integration.slack_user_id)
+        if resp.get("snooze_enabled", False):
+            return True
+        now = time.time()
+        start = resp.get("next_dnd_start_ts", 0)
+        end = resp.get("next_dnd_end_ts", 0)
+        return start <= now < end
+
+    @override
+    def resolve_timezone(self, user: User) -> str:
+        integration = SlackIntegration.for_user(user)
+        profile = self._fetch_user(integration.slack_user_id)
+        return profile.get("tz", "UTC")
+
+    @override
+    def resolve_schedule(self, user: User) -> dict[str, Any]:
+        integration = SlackIntegration.for_user(user)
+        result: dict[str, Any] = {}
+        for key in ("schedule_start", "schedule_end"):
+            value = integration.metadata.get(key)
+            if value is not None:
+                result[key] = int(value)
+        return result

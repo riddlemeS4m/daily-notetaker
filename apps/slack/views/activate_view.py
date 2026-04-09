@@ -21,7 +21,8 @@ class ActivateView(View):
     def post(self, request, *args, **kwargs):
         slack_user_id = request.POST.get("user_id")
         team_id = request.POST.get("team_id")
-        mode = ChatMode.parse(request.POST.get("text", ""))
+        text = request.POST.get("text", "").strip()
+        mode = ChatMode.parse(text) if text else ChatMode.SCHEDULED
 
         if mode is None:
             return JsonTemplateLoader.ephemeral_response(
