@@ -1,14 +1,12 @@
 import json
-import logging
 from pathlib import Path
+from typing import override
 
 from django.conf import settings
-from openai import APIError, OpenAI
+from openai import OpenAI
 
 from apps.core.models import Message, Session
 from apps.core.services import LLMService
-
-logger = logging.getLogger(__name__)
 
 ROLE_MAP = {
     Message.Role.USER: "user",
@@ -24,37 +22,32 @@ class OpenAILLMService(LLMService):
     Uses the Chat Completions API to generate responses.
     """
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str):
         self.client = OpenAI(api_key=api_key)
         self.model = model
         self.system_prompt = SYSTEM_PROMPT_PATH.read_text().strip()
 
+    @override
     def generate(self, session: Session) -> LLMService.GenerateResult:
         messages = self._build_messages(session)
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                response_format={"type": "json_object"},
-            )
-            raw = json.loads(response.choices[0].message.content)
-            return self.GenerateResult(
-                message=raw["message"],
-                categories_covered=raw.get("categories_covered", []),
-                conversation_complete=raw.get("conversation_complete", False),
-            )
-        except APIError as e:
-            logger.error(
-                "OpenAI API error for session %s: %s", session.id, e,
-            )
-            raise
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        raw = json.loads(response.choices[0].message.content)
+        return self.GenerateResult(
+            message=raw["message"],
+            categories_covered=raw.get("categories_covered", []),
+            conversation_complete=raw.get("conversation_complete", False),
+        )
 
     def _build_messages(self, session: Session) -> list[dict]:
         messages = [{"role": "system", "content": self.system_prompt}]
 
-        for msg in session.messages.order_by("created_at"):
-            role = ROLE_MAP.get(msg.role)
+        for message in session.messages.order_by("created_at"):
+            role = ROLE_MAP.get(message.role)
             if role:
-                messages.append({"role": role, "content": msg.content})
+                messages.append({"role": role, "content": message.content})
 
         return messages
