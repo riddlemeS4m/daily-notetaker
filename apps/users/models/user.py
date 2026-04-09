@@ -26,7 +26,9 @@ class User(AbstractUser):
         self.chat_mode = mode
         self.opted_in_at = timezone.now()
         self.opted_out_at = None
-        self.save(update_fields=["chat_mode", "opted_in_at", "opted_out_at", "updated_at"])
+        self.save(
+            update_fields=["chat_mode", "opted_in_at", "opted_out_at", "updated_at"]
+        )
 
     def deactivate(self) -> None:
         self.opted_out_at = timezone.now()

@@ -11,6 +11,35 @@ class NotificationService(ABC):
     """
 
     @abstractmethod
+    def resolve_username(self, external_id: str) -> str:
+        """
+        Return a human-readable username for the given vendor user.
+
+        Used to populate ``User.username`` at account creation time
+        so the field contains a recognisable handle rather than an
+        opaque vendor ID.
+
+        Args:
+            external_id: The vendor-specific user identifier
+                         (e.g. a Slack user ID).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_name(self, external_id: str) -> tuple[str, str]:
+        """
+        Return ``(first_name, last_name)`` for the given vendor user.
+
+        Used to populate ``User.first_name`` and ``User.last_name``
+        at account creation time.
+
+        Args:
+            external_id: The vendor-specific user identifier
+                         (e.g. a Slack user ID).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def resolve_context(self, user: User) -> dict[str, Any]:
         """
         Resolve the delivery context for a user.
