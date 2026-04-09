@@ -1,20 +1,14 @@
-import logging
-
-from django.http import JsonResponse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.constants import ChatMode
 from apps.core.models import Session
+from apps.core.services import JsonTemplateLoader
+from apps.slack.decorators import verify_slack_signature
 from apps.slack.models import SlackIntegration
-from apps.users.models import User
 
-logger = logging.getLogger(__name__)
-
-
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator([csrf_exempt, verify_slack_signature], name="dispatch")
 class ActivateView(View):
     """
     Handles the /activate <mode> slash command.
@@ -27,37 +21,20 @@ class ActivateView(View):
         mode = ChatMode.parse(request.POST.get("text", ""))
 
         if mode is None:
-            return JsonResponse(
-                {
-                    "response_type": "ephemeral",
-                    "text": "Please specify a mode: `/activate scheduled` or `/activate conversational`",
-                }
+            return JsonTemplateLoader.ephemeral_response(
+                "commands/activate/invalid_mode.json"
             )
 
-        try:
-            integration = SlackIntegration.for_external_id(slack_user_id)
-            user = integration.user
-        except SlackIntegration.DoesNotExist:
-            user = User.objects.create(username=slack_user_id)
-            SlackIntegration.objects.create(
-                user=user,
-                vendor=SlackIntegration.VENDOR,
-                external_id=slack_user_id,
-                metadata={"team_id": team_id},
-            )
+        integration = SlackIntegration.find_or_create(
+            slack_user_id, metadata={"team_id": team_id}
+        )
+        user = integration.user
 
+        # user may have an open session from a previous opt-in
         Session.close_all_open(user)
 
-        user.chat_mode = mode
-        user.opted_in_at = timezone.now()
-        user.opted_out_at = None
-        user.save(
-            update_fields=["chat_mode", "opted_in_at", "opted_out_at", "updated_at"]
-        )
+        user.activate(mode)
 
-        return JsonResponse(
-            {
-                "response_type": "ephemeral",
-                "text": f"You're all set! Check-ins are active in *{mode}* mode.",
-            }
+        return JsonTemplateLoader.ephemeral_response(
+            "commands/activate/success.json", mode=mode
         )
