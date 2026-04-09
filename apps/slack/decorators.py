@@ -37,7 +37,8 @@ def verify_slack_signature(view_func):
 def require_slack_integration(view_func):
     """
     View decorator that resolves the SlackIntegration for the requesting
-    Slack user (from POST ``user_id``) and sets ``request.slack_integration``.
+    Slack user (from POST ``user_id``) and sets ``request.slack_integration``
+    and ``request.slack_text`` (stripped command argument text).
     Returns an ephemeral error if no integration exists.
     """
 
@@ -50,7 +51,25 @@ def require_slack_integration(view_func):
             )
         except SlackIntegration.DoesNotExist:
             return JsonTemplateLoader.ephemeral_response(
-                "commands/mode/not_opted_in.json"
+                "commands/not_opted_in.json"
+            )
+        request.slack_text = request.POST.get("text", "").strip()
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def require_opted_in(view_func):
+    """
+    View decorator (must run after ``require_slack_integration``) that
+    rejects users who haven't opted in with an ephemeral error.
+    """
+
+    @functools.wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.slack_integration.user.is_opted_in:
+            return JsonTemplateLoader.ephemeral_response(
+                "commands/not_opted_in.json"
             )
         return view_func(request, *args, **kwargs)
 

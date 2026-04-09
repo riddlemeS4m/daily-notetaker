@@ -20,6 +20,12 @@ class SlackNotificationService(NotificationService):
     def __init__(self, token: str):
         self.client = WebClient(token=token)
         self._user_profile: dict[str, dict[str, Any]] = {}
+        self._integration: dict[int, SlackIntegration] = {}
+
+    def _get_integration(self, user: User) -> SlackIntegration:
+        if user.pk not in self._integration:
+            self._integration[user.pk] = SlackIntegration.for_user(user)
+        return self._integration[user.pk]
 
     def _fetch_user(self, external_id: str) -> dict[str, Any]:
         if external_id not in self._user_profile:
@@ -39,7 +45,7 @@ class SlackNotificationService(NotificationService):
 
     @override
     def resolve_context(self, user: User) -> dict[str, Any]:
-        integration = SlackIntegration.for_user(user)
+        integration = self._get_integration(user)
         return {
             "channel": integration.slack_user_id,
         }
@@ -88,7 +94,7 @@ class SlackNotificationService(NotificationService):
 
     @override
     def is_dnd_active(self, user: User) -> bool:
-        integration = SlackIntegration.for_user(user)
+        integration = self._get_integration(user)
         resp = self.client.dnd_info(user=integration.slack_user_id)
         if resp.get("snooze_enabled", False):
             return True
@@ -99,16 +105,10 @@ class SlackNotificationService(NotificationService):
 
     @override
     def resolve_timezone(self, user: User) -> str:
-        integration = SlackIntegration.for_user(user)
+        integration = self._get_integration(user)
         profile = self._fetch_user(integration.slack_user_id)
         return profile.get("tz", "UTC")
 
     @override
     def resolve_schedule(self, user: User) -> dict[str, Any]:
-        integration = SlackIntegration.for_user(user)
-        result: dict[str, Any] = {}
-        for key in ("schedule_start", "schedule_end"):
-            value = integration.metadata.get(key)
-            if value is not None:
-                result[key] = int(value)
-        return result
+        return self._get_integration(user).schedule_overrides

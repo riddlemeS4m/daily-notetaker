@@ -4,10 +4,15 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.models import Session
 from apps.core.services import JsonTemplateLoader
-from apps.slack.decorators import require_slack_integration, verify_slack_signature
+from apps.slack.decorators import (
+    require_opted_in,
+    require_slack_integration,
+    verify_slack_signature,
+)
+
 
 @method_decorator(
-    [csrf_exempt, verify_slack_signature, require_slack_integration],
+    [csrf_exempt, verify_slack_signature, require_slack_integration, require_opted_in],
     name="dispatch",
 )
 class DeactivateView(View):
@@ -18,11 +23,6 @@ class DeactivateView(View):
 
     def post(self, request, *args, **kwargs):
         user = request.slack_integration.user
-
-        if not user.is_opted_in:
-            return JsonTemplateLoader.ephemeral_response(
-                "commands/deactivate/not_activated.json"
-            )
 
         user.deactivate()
         Session.close_all_open(user)

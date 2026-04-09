@@ -38,13 +38,26 @@ class SlackIntegration(UserIntegration):
         val = self.metadata.get("schedule_end")
         return int(val) if val is not None else None
 
-    def set_schedule_start(self, hour: int) -> None:
-        self.metadata["schedule_start"] = hour
+    def _set_schedule_hour(self, key: str, hour: int) -> None:
+        if not isinstance(hour, int) or not (0 <= hour <= 23):
+            raise ValueError(f"Hour must be an integer 0-23, got {hour!r}")
+        self.metadata[key] = hour
         self.save(update_fields=["metadata", "updated_at"])
 
+    def set_schedule_start(self, hour: int) -> None:
+        self._set_schedule_hour("schedule_start", hour)
+
     def set_schedule_end(self, hour: int) -> None:
-        self.metadata["schedule_end"] = hour
-        self.save(update_fields=["metadata", "updated_at"])
+        self._set_schedule_hour("schedule_end", hour)
+
+    @property
+    def schedule_overrides(self) -> dict[str, int]:
+        result: dict[str, int] = {}
+        if self.schedule_start is not None:
+            result["schedule_start"] = self.schedule_start
+        if self.schedule_end is not None:
+            result["schedule_end"] = self.schedule_end
+        return result
 
     @classmethod
     def for_user(cls, user: User) -> SlackIntegration:

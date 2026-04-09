@@ -1,7 +1,13 @@
+from django.http import HttpResponse
+
+
 class ApplicationError(Exception):
     """Base for all application-level errors."""
 
     status_code = 500
+
+    def to_response(self) -> HttpResponse:
+        return HttpResponse(status=self.status_code)
 
 
 class BadRequestError(ApplicationError):

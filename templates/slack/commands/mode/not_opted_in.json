@@ -1,9 +1,0 @@
-[
-  {
-    "type": "section",
-    "text": {
-      "type": "mrkdwn",
-      "text": "You need to opt-in first. Use `/activate <mode>` to get started."
-    }
-  }
-]
