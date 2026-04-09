@@ -21,3 +21,13 @@ services:
     command: celery -A config beat --loglevel=info
     env_file: .env
     restart: unless-stopped
+
+  flower:
+    image: riddlemes4m/daily-notetaker:latest
+    command: celery -A config flower --port=5555
+    ports:
+      - "5555:5555"
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      - worker
