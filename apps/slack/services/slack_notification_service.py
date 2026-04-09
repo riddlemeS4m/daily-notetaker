@@ -10,7 +10,7 @@ from apps.users.models import User
 class SlackNotificationService(NotificationService):
     """
     Slack implementation of NotificationService.
-    Requires bot scopes: chat:write
+    Requires bot scopes: chat:write, users:read
     """
 
     VENDOR = "slack"
@@ -18,6 +18,23 @@ class SlackNotificationService(NotificationService):
 
     def __init__(self, token: str):
         self.client = WebClient(token=token)
+        self._user_profile: dict[str, dict[str, Any]] = {}
+
+    def _fetch_user(self, external_id: str) -> dict[str, Any]:
+        if external_id not in self._user_profile:
+            response = self.client.users_info(user=external_id)
+            self._user_profile[external_id] = response["user"]
+        return self._user_profile[external_id]
+
+    @override
+    def resolve_username(self, external_id: str) -> str:
+        user = self._fetch_user(external_id)
+        return user.get("name", external_id)
+
+    @override
+    def resolve_name(self, external_id: str) -> tuple[str, str]:
+        profile = self._fetch_user(external_id).get("profile", {})
+        return profile.get("first_name", ""), profile.get("last_name", "")
 
     @override
     def resolve_context(self, user: User) -> dict[str, Any]:

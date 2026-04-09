@@ -43,7 +43,13 @@ class SlackIntegration(UserIntegration):
 
     @classmethod
     def find_or_create(
-        cls, slack_user_id: str, metadata: dict[str, Any] | None = None,
+        cls,
+        slack_user_id: str,
+        *,
+        username: str,
+        first_name: str,
+        last_name: str,
+        metadata: dict[str, Any] | None = None,
     ) -> SlackIntegration:
         """
         Return the SlackIntegration for the given Slack user ID,
@@ -54,7 +60,11 @@ class SlackIntegration(UserIntegration):
         except cls.DoesNotExist:
             try:
                 with transaction.atomic():
-                    user = User.objects.create(username=slack_user_id)
+                    user = User.objects.create(
+                        username=username,
+                        first_name=first_name,
+                        last_name=last_name,
+                    )
                     return cls.objects.create(
                         user=user,
                         vendor=cls.VENDOR,
