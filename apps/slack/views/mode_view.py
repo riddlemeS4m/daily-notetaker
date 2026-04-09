@@ -1,18 +1,16 @@
-import logging
-
-from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.constants import ChatMode
 from apps.core.models import Session
-from apps.slack.models import SlackIntegration
+from apps.core.services import JsonTemplateLoader
+from apps.slack.decorators import require_slack_integration, verify_slack_signature
 
-logger = logging.getLogger(__name__)
-
-
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(
+    [csrf_exempt, verify_slack_signature, require_slack_integration],
+    name="dispatch",
+)
 class ModeView(View):
     """
     Handles the /mode [mode] slash command.
@@ -21,44 +19,28 @@ class ModeView(View):
     """
 
     def post(self, request, *args, **kwargs):
-        slack_user_id = request.POST.get("user_id")
+        user = request.slack_integration.user
 
-        user = SlackIntegration.get_user(slack_user_id)
-        if user is None or not user.is_opted_in:
-            return JsonResponse(
-                {
-                    "response_type": "ephemeral",
-                    "text": "You need to opt-in first. Use `/activate <mode>` to get started.",
-                }
+        if not user.is_opted_in:
+            return JsonTemplateLoader.ephemeral_response(
+                "commands/mode/not_opted_in.json"
             )
 
         text = request.POST.get("text", "").strip()
         if not text:
-            return JsonResponse(
-                {
-                    "response_type": "ephemeral",
-                    "text": f"Your current mode is *{user.chat_mode}*.",
-                }
+            return JsonTemplateLoader.ephemeral_response(
+                "commands/mode/current_mode.json", mode=user.chat_mode
             )
 
         mode = ChatMode.parse(text)
         if mode is None:
-            return JsonResponse(
-                {
-                    "response_type": "ephemeral",
-                    "text": "Please specify a mode: `/mode scheduled` or `/mode conversational`",
-                }
+            return JsonTemplateLoader.ephemeral_response(
+                "commands/mode/invalid_mode.json"
             )
 
-        old_mode = user.chat_mode
-        user.chat_mode = mode
-        user.save(update_fields=["chat_mode", "updated_at"])
-
+        old_mode = user.switch_mode(mode)
         Session.close_all_open(user, chat_mode=old_mode)
 
-        return JsonResponse(
-            {
-                "response_type": "ephemeral",
-                "text": f"Switched to *{mode}* mode.",
-            }
+        return JsonTemplateLoader.ephemeral_response(
+            "commands/mode/success.json", mode=mode
         )

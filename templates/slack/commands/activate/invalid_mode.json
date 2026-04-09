@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Please specify a mode: `/activate scheduled` or `/activate conversational`"
+    }
+  }
+]

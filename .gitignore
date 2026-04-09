@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Temporary files
+tmp/
+
+# Cursor plans
+.cursor/plans/

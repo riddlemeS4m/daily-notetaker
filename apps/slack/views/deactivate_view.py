@@ -1,18 +1,15 @@
-import logging
-
-from django.http import JsonResponse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.models import Session
-from apps.slack.models import SlackIntegration
+from apps.core.services import JsonTemplateLoader
+from apps.slack.decorators import require_slack_integration, verify_slack_signature
 
-logger = logging.getLogger(__name__)
-
-
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(
+    [csrf_exempt, verify_slack_signature, require_slack_integration],
+    name="dispatch",
+)
 class DeactivateView(View):
     """
     Handles the /deactivate slash command.
@@ -20,25 +17,16 @@ class DeactivateView(View):
     """
 
     def post(self, request, *args, **kwargs):
-        slack_user_id = request.POST.get("user_id")
+        user = request.slack_integration.user
 
-        user = SlackIntegration.get_user(slack_user_id)
-        if user is None or not user.is_opted_in:
-            return JsonResponse(
-                {
-                    "response_type": "ephemeral",
-                    "text": "You don't have an active check-in session.",
-                }
+        if not user.is_opted_in:
+            return JsonTemplateLoader.ephemeral_response(
+                "commands/deactivate/not_activated.json"
             )
 
-        user.opted_out_at = timezone.now()
-        user.save(update_fields=["opted_out_at", "updated_at"])
-
+        user.deactivate()
         Session.close_all_open(user)
 
-        return JsonResponse(
-            {
-                "response_type": "ephemeral",
-                "text": "Check-ins paused. Use `/activate <mode>` to resume.",
-            }
+        return JsonTemplateLoader.ephemeral_response(
+            "commands/deactivate/success.json"
         )

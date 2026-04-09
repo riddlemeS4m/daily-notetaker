@@ -19,7 +19,7 @@ class LLMService(ABC):
         conversation_complete: bool = False
 
     @abstractmethod
-    def generate(self, session: Session) -> LLMService.GenerateResult:
+    def generate(self, session: Session) -> GenerateResult:
         """
         Generate a reply given the current session.
 
