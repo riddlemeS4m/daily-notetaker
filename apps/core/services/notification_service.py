@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import Any
+
+from apps.users.models import User
 
 
 class NotificationService(ABC):
@@ -8,7 +11,7 @@ class NotificationService(ABC):
     """
 
     @abstractmethod
-    def resolve_context(self, user) -> dict:
+    def resolve_context(self, user: User) -> dict[str, Any]:
         """
         Resolve the delivery context for a user.
 
@@ -23,7 +26,7 @@ class NotificationService(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def send_prompt(self, user, template_key: str) -> None:
+    def send_prompt(self, user: User, template_key: str) -> None:
         """
         Send a bot-initiated prompt to a user, rendered from a template.
 
@@ -35,7 +38,7 @@ class NotificationService(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def send_reply(self, user, text: str) -> None:
+    def send_reply(self, user: User, text: str) -> None:
         """
         Send a plain-text reply to a user.
         Used for dynamic content (e.g. LLM-generated responses) that
@@ -48,7 +51,7 @@ class NotificationService(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def read_response(self, payload: dict) -> dict:
+    def read_response(self, payload: dict[str, Any]) -> dict[str, Any]:
         """
         Parse an inbound vendor payload into a normalised response dict.
 
