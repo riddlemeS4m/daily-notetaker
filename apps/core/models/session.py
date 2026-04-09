@@ -46,7 +46,7 @@ class Session(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "chat_mode"],
-                condition=models.Q(status__in=[Status.ACTIVE, Status.AWAITING_RESPONSE]),
+                condition=models.Q(status__in=["active", "awaiting_response"]),
                 name="uq_one_open_session_per_user_mode",
             ),
         ]
