@@ -24,6 +24,30 @@ caller to read state before mutating.
 
 ---
 
+## Timestamp fields on every model
+
+Every model defines `created_at` (`auto_now_add=True`) and `updated_at`
+(`auto_now=True`). Two Django gotchas require discipline:
+
+1. **`save(update_fields=...)` must include `"updated_at"`** — Django
+   only auto-sets `auto_now` fields during save if they appear in the
+   `update_fields` list.
+2. **`QuerySet.update()` bypasses `auto_now` entirely** — pass
+   `updated_at=timezone.now()` explicitly.
+
+All existing model methods already follow this. When adding new mutation
+methods, keep the pattern:
+
+```python
+# Instance save — include updated_at
+self.save(update_fields=["field_a", "field_b", "updated_at"])
+
+# Bulk update — pass it explicitly
+qs.update(field_a=value, updated_at=timezone.now())
+```
+
+---
+
 ## Abstract base classes define contracts
 
 The two abstraction axes — `NotificationService` (how you communicate) and
