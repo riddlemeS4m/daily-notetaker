@@ -1,11 +1,16 @@
+import logging
 import time
 from typing import Any, override
 
 from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
+from apps.core.exceptions import ExternalServiceError
 from apps.core.services import JsonTemplateLoader, NotificationService
 from apps.slack.models import SlackIntegration
 from apps.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class SlackNotificationService(NotificationService):
@@ -29,7 +34,12 @@ class SlackNotificationService(NotificationService):
 
     def _fetch_user(self, external_id: str) -> dict[str, Any]:
         if external_id not in self._user_profile:
-            response = self.client.users_info(user=external_id)
+            try:
+                response = self.client.users_info(user=external_id)
+            except SlackApiError as exc:
+                raise ExternalServiceError(
+                    f"Slack users.info failed for {external_id}"
+                ) from exc
             self._user_profile[external_id] = response["user"]
         return self._user_profile[external_id]
 
@@ -95,7 +105,12 @@ class SlackNotificationService(NotificationService):
     @override
     def is_dnd_active(self, user: User) -> bool:
         integration = self._get_integration(user)
-        resp = self.client.dnd_info(user=integration.slack_user_id)
+        try:
+            resp = self.client.dnd_info(user=integration.slack_user_id)
+        except SlackApiError as exc:
+            raise ExternalServiceError(
+                f"Slack dnd.info failed for user {user.pk}"
+            ) from exc
         if resp.get("snooze_enabled", False):
             return True
         now = time.time()

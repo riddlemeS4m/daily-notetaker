@@ -24,7 +24,7 @@ class DndView(View):
 
     def post(self, request, *args, **kwargs):
         user = request.slack_integration.user
-        text = request.slack_text.lower()
+        text = request.slack_text.strip().lower()
 
         if not text:
             text = "off" if user.respect_dnd else "on"
