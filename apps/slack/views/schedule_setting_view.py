@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -24,7 +23,7 @@ class ScheduleSettingView(View):
     """
 
     setting_label: str
-    default_setting: str
+    default_value: int
     getter_attr: str
     setter_attr: str
 
@@ -35,7 +34,7 @@ class ScheduleSettingView(View):
         if not text:
             current = getattr(integration, self.getter_attr)
             if current is None:
-                current = getattr(settings, self.default_setting)
+                current = self.default_value
             return JsonTemplateLoader.ephemeral_response(
                 "commands/schedules/current_value.json",
                 setting=self.setting_label,

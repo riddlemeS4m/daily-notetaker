@@ -1,3 +1,4 @@
+from apps.scheduled.handlers.schedule_handler import ScheduleHandler
 from apps.slack.views.schedule_setting_view import ScheduleSettingView
 
 
@@ -8,6 +9,6 @@ class StartView(ScheduleSettingView):
     """
 
     setting_label = "Schedule start hour"
-    default_setting = "SCHEDULE_START_HOUR"
+    default_value = ScheduleHandler.SCHEDULE_START_HOUR
     getter_attr = "schedule_start"
     setter_attr = "set_schedule_start"

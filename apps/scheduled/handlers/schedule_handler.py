@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from typing import override
 from zoneinfo import ZoneInfo
 
-from django.conf import settings
 from django.utils import timezone
 
 from apps.core.constants import ChatMode
@@ -22,6 +21,9 @@ class ScheduleHandler(SessionHandler):
 
     CHAT_MODE = ChatMode.SCHEDULED
     PROMPT_TEMPLATE_KEY = "scheduled/hourly_prompt.json"
+    PROMPT_INTERVAL_HOURS = 2
+    SCHEDULE_START_HOUR = 7
+    SCHEDULE_END_HOUR = 19
 
     @override
     def handle_inbound(self, user: User, content: str) -> None:
@@ -50,8 +52,8 @@ class ScheduleHandler(SessionHandler):
         """
         tz_name = self.notification_service.resolve_timezone(user)
         overrides = self.notification_service.resolve_schedule(user)
-        start = overrides.get("schedule_start", settings.SCHEDULE_START_HOUR)
-        end = overrides.get("schedule_end", settings.SCHEDULE_END_HOUR)
+        start = overrides.get("schedule_start", self.SCHEDULE_START_HOUR)
+        end = overrides.get("schedule_end", self.SCHEDULE_END_HOUR)
         user_hour = datetime.now(ZoneInfo(tz_name)).hour
 
         if start <= end:
@@ -92,7 +94,7 @@ class ScheduleHandler(SessionHandler):
         Close any scheduled sessions that have exceeded the prompt interval.
         Called periodically by a Celery task.
         """
-        cutoff = timezone.now() - timedelta(hours=settings.PROMPT_INTERVAL_HOURS)
+        cutoff = timezone.now() - timedelta(hours=cls.PROMPT_INTERVAL_HOURS)
         count = Session.close_all_open(
             chat_mode=ChatMode.SCHEDULED,
             stale_before=cutoff,
