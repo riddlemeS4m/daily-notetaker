@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -5,12 +6,14 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.core.constants import ChatMode
 from apps.core.models import Session
 from apps.core.services import JsonTemplateLoader
+from apps.scheduled.handlers import ScheduleHandler
 from apps.slack.decorators import (
     require_opted_in,
     require_slack_integration,
     verify_slack_signature,
 )
 from apps.slack.exceptions import SlackCommandError
+from apps.slack.services import SlackNotificationService
 
 
 @method_decorator(
@@ -43,6 +46,15 @@ class ModeView(View):
             raise SlackCommandError("commands/mode/invalid_mode.json") from ex
 
         Session.close_all_open(user, chat_mode=old_mode)
+
+        service = SlackNotificationService(token=settings.SLACK_BOT_TOKEN)
+        handler = ScheduleHandler(notification_service=service)
+
+        if mode == ChatMode.SCHEDULED:
+            handler.seed_schedule(user)
+        elif old_mode == ChatMode.SCHEDULED:
+            integration = request.slack_integration
+            ScheduleHandler.cancel_pending_jobs(integration)
 
         return JsonTemplateLoader.ephemeral_response(
             "commands/mode/success.json", mode=mode

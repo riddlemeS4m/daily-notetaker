@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.models import Session
 from apps.core.services import JsonTemplateLoader
+from apps.scheduled.handlers import ScheduleHandler
 from apps.slack.decorators import (
     require_opted_in,
     require_slack_integration,
@@ -22,10 +23,12 @@ class DeactivateView(View):
     """
 
     def post(self, request, *args, **kwargs):
-        user = request.slack_integration.user
+        integration = request.slack_integration
+        user = integration.user
 
         user.deactivate()
         Session.close_all_open(user)
+        ScheduleHandler.cancel_pending_jobs(integration)
 
         return JsonTemplateLoader.ephemeral_response(
             "commands/deactivate/success.json"

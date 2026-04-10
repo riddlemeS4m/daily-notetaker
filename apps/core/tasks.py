@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def close_end_of_day_sessions() -> None:
+def close_end_of_day_sessions_task() -> None:
     """
     Fallback sweep that closes any sessions still open at end of day.
     Runs daily at 08:00 UTC via Celery Beat.

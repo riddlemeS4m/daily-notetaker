@@ -1,0 +1,12 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "*Good morning!* :sunrise:\nWhat's on your plate today? Let's get it down."
+    }
+  },
+  {
+    "type": "divider"
+  }
+]

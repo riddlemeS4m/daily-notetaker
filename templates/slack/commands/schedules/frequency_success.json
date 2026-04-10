@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Prompt frequency is now every *$value minutes*."
+    }
+  }
+]

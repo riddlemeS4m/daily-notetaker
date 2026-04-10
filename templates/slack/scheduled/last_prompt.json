@@ -1,0 +1,12 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "*Wrapping up for the day* :moon:\nAnything to capture before you sign off?"
+    }
+  },
+  {
+    "type": "divider"
+  }
+]

@@ -37,6 +37,9 @@ class SlackIntegration(UserIntegration):
             return None
         return hour if 0 <= hour <= 23 else None
 
+    MIN_FREQUENCY_MINUTES = 15
+    MAX_FREQUENCY_MINUTES = 480
+
     @property
     def schedule_start(self) -> int | None:
         val = self.metadata.get("schedule_start")
@@ -46,6 +49,19 @@ class SlackIntegration(UserIntegration):
     def schedule_end(self) -> int | None:
         val = self.metadata.get("schedule_end")
         return self._valid_hour(val) if val is not None else None
+
+    @property
+    def frequency_minutes(self) -> int | None:
+        val = self.metadata.get("frequency_minutes")
+        if val is None:
+            return None
+        try:
+            minutes = int(val)
+        except (TypeError, ValueError):
+            return None
+        if self.MIN_FREQUENCY_MINUTES <= minutes <= self.MAX_FREQUENCY_MINUTES:
+            return minutes
+        return None
 
     def _set_schedule_hour(self, key: str, hour: int) -> None:
         if self._valid_hour(hour) is None:
@@ -59,6 +75,21 @@ class SlackIntegration(UserIntegration):
     def set_schedule_end(self, hour: int) -> None:
         self._set_schedule_hour("schedule_end", hour)
 
+    def set_frequency_minutes(self, minutes: int) -> None:
+        try:
+            minutes = int(minutes)
+        except (TypeError, ValueError) as ex:
+            raise ValueError(
+                f"Frequency must be an integer, got {minutes!r}"
+            ) from ex
+        if not (self.MIN_FREQUENCY_MINUTES <= minutes <= self.MAX_FREQUENCY_MINUTES):
+            raise ValueError(
+                f"Frequency must be between {self.MIN_FREQUENCY_MINUTES} "
+                f"and {self.MAX_FREQUENCY_MINUTES} minutes, got {minutes}"
+            )
+        self.metadata["frequency_minutes"] = minutes
+        self.save(update_fields=["metadata", "updated_at"])
+
     @property
     def schedule_overrides(self) -> dict[str, int]:
         result: dict[str, int] = {}
@@ -66,6 +97,8 @@ class SlackIntegration(UserIntegration):
             result["schedule_start"] = self.schedule_start
         if self.schedule_end is not None:
             result["schedule_end"] = self.schedule_end
+        if self.frequency_minutes is not None:
+            result["frequency_minutes"] = self.frequency_minutes
         return result
 
     @classmethod
