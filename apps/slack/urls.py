@@ -5,6 +5,7 @@ from apps.slack.views import (
     DeactivateView,
     DndView,
     EndView,
+    FrequencyView,
     ModeView,
     SlackEventView,
     StartView,
@@ -18,4 +19,5 @@ urlpatterns = [
     path("commands/dnd/", DndView.as_view(), name="slack-dnd"),
     path("commands/start/", StartView.as_view(), name="slack-start"),
     path("commands/end/", EndView.as_view(), name="slack-end"),
+    path("commands/frequency/", FrequencyView.as_view(), name="slack-frequency"),
 ]

@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.core.constants import ChatMode
 from apps.core.models import Session
 from apps.core.services import JsonTemplateLoader
+from apps.scheduled.handlers import ScheduleHandler
 from apps.slack.decorators import verify_slack_signature
 from apps.slack.exceptions import SlackCommandError
 from apps.slack.models import SlackIntegration
@@ -47,6 +48,10 @@ class ActivateView(View):
             user.activate(mode)
         except ValueError as ex:
             raise SlackCommandError("commands/activate/invalid_mode.json") from ex
+
+        if mode == ChatMode.SCHEDULED:
+            handler = ScheduleHandler(notification_service=service)
+            handler.seed_schedule(user)
 
         return JsonTemplateLoader.ephemeral_response(
             "commands/activate/success.json", mode=mode

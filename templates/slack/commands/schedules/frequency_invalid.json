@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Invalid frequency. Please provide a number of minutes between 15 and 480."
+    }
+  }
+]

@@ -5,65 +5,54 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.core.constants import ChatMode
 from apps.core.services import JsonTemplateLoader
+from apps.scheduled.handlers import ScheduleHandler
 from apps.slack.decorators import (
     require_opted_in,
     require_slack_integration,
     verify_slack_signature,
 )
 from apps.slack.exceptions import SlackCommandError
+from apps.slack.services import SlackNotificationService
 
 
 @method_decorator(
     [csrf_exempt, verify_slack_signature, require_slack_integration, require_opted_in],
     name="dispatch",
 )
-class ScheduleSettingView(View):
+class FrequencyView(View):
     """
-    Base view for /start and /end slash commands.
-    Subclasses set the four class attributes to control which schedule
-    bound they read and write.
+    Handles the /frequency [minutes] slash command.
+    Sets or displays how often the user is prompted (in minutes).
     """
-
-    setting_label: str
-    default_value: int
-    getter_attr: str
-    setter_attr: str
 
     def post(self, request, *args, **kwargs):
         integration = request.slack_integration
+        user = integration.user
         text = request.slack_text
 
         if not text:
-            current = getattr(integration, self.getter_attr)
+            current = integration.frequency_minutes
             if current is None:
-                current = self.default_value
+                current = ScheduleHandler.PROMPT_INTERVAL_MINUTES
             return JsonTemplateLoader.ephemeral_response(
-                "commands/schedules/current_value.json",
-                setting=self.setting_label,
+                "commands/schedules/frequency_current.json",
                 value=current,
             )
 
         try:
-            hour = int(text)
-            getattr(integration, self.setter_attr)(hour)
+            integration.set_frequency_minutes(int(text))
         except (ValueError, TypeError) as ex:
             raise SlackCommandError(
-                "commands/schedules/invalid_value.json",
-                setting=self.setting_label,
+                "commands/schedules/frequency_invalid.json",
             ) from ex
 
-        user = integration.user
         if user.chat_mode == ChatMode.SCHEDULED and user.is_opted_in:
-            from apps.scheduled.handlers import ScheduleHandler
-            from apps.slack.services import SlackNotificationService
-
             service = SlackNotificationService(token=settings.SLACK_BOT_TOKEN)
             handler = ScheduleHandler(notification_service=service)
             handler.compute_schedule(user, integration)
             handler.seed_schedule(user)
 
         return JsonTemplateLoader.ephemeral_response(
-            "commands/schedules/success.json",
-            setting=self.setting_label,
-            value=hour,
+            "commands/schedules/frequency_success.json",
+            value=integration.frequency_minutes,
         )

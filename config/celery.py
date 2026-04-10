@@ -1,5 +1,4 @@
 import os
-from datetime import timedelta
 
 from celery import Celery
 from celery.schedules import crontab
@@ -14,19 +13,13 @@ app.autodiscover_tasks()
 
 @app.on_after_finalize.connect
 def setup_beat_schedule(sender, **kwargs):
-    from apps.scheduled.handlers.schedule_handler import ScheduleHandler
-
     sender.conf.beat_schedule = {
-        "dispatch-scheduled-prompts": {
-            "task": "apps.scheduled.tasks.dispatch_scheduled_prompts",
-            "schedule": timedelta(hours=ScheduleHandler.PROMPT_INTERVAL_HOURS),
-        },
-        "expire-stale-sessions": {
-            "task": "apps.scheduled.tasks.expire_stale_sessions",
-            "schedule": crontab(minute=30),
+        "dispatch-due-jobs": {
+            "task": "apps.scheduled.tasks.dispatch_due_jobs_task",
+            "schedule": crontab(),  # every minute
         },
         "close-end-of-day-sessions": {
-            "task": "apps.core.tasks.close_end_of_day_sessions",
+            "task": "apps.core.tasks.close_end_of_day_sessions_task",
             "schedule": crontab(hour=8, minute=0),
         },
     }
