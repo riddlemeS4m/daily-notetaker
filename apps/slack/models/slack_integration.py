@@ -28,18 +28,27 @@ class SlackIntegration(UserIntegration):
     def team_id(self) -> str | None:
         return self.metadata.get("team_id")
 
+    @staticmethod
+    def _valid_hour(val: object) -> int | None:
+        """Return val as a valid hour (0-23), or None if unusable."""
+        try:
+            hour = int(val)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
+        return hour if 0 <= hour <= 23 else None
+
     @property
     def schedule_start(self) -> int | None:
         val = self.metadata.get("schedule_start")
-        return int(val) if val is not None else None
+        return self._valid_hour(val) if val is not None else None
 
     @property
     def schedule_end(self) -> int | None:
         val = self.metadata.get("schedule_end")
-        return int(val) if val is not None else None
+        return self._valid_hour(val) if val is not None else None
 
     def _set_schedule_hour(self, key: str, hour: int) -> None:
-        if not isinstance(hour, int) or not (0 <= hour <= 23):
+        if self._valid_hour(hour) is None:
             raise ValueError(f"Hour must be an integer 0-23, got {hour!r}")
         self.metadata[key] = hour
         self.save(update_fields=["metadata", "updated_at"])

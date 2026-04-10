@@ -24,6 +24,43 @@ caller to read state before mutating.
 
 ---
 
+## Model-level validation
+
+Models validate their own invariants. Extract a `_validate_*` method,
+call it at the top of the setter, and raise `ValueError` on bad input.
+Keep allowed-value constants at the class level for discoverability.
+When an enum is shared across models (e.g. `ChatMode`), put the
+`validate()` classmethod on the enum itself.
+
+```python
+VALID_DND_VALUES = {"on", "off"}
+
+@classmethod
+def _validate_dnd(cls, value: str) -> None:
+    if value not in cls.VALID_DND_VALUES:
+        raise ValueError(f"DND value must be one of {cls.VALID_DND_VALUES}, got {value!r}")
+
+def set_dnd(self, value: str) -> None:
+    self._validate_dnd(value)
+    self.metadata["dnd"] = value
+    self.save(update_fields=["metadata", "updated_at"])
+```
+
+Properties that read from loosely-typed storage (`JSONField`) should
+degrade gracefully on corrupt data — return `None` so downstream code
+falls back to application defaults rather than raising.
+
+Views catch `ValueError` from model setters and translate to the
+appropriate `ApplicationError` subclass (e.g. `SlackCommandError`) so
+the error middleware can render a user-facing response. This is
+distinct from the guard clauses described below — guards check
+eligibility, validation enforces domain invariants.
+
+Django's `clean()` / `full_clean()` is not used because mutations use
+`save(update_fields=[...])` and `full_clean()` validates all fields.
+
+---
+
 ## Timestamp fields on every model
 
 Every model defines `created_at` (`auto_now_add=True`) and `updated_at`

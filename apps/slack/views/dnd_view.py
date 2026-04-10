@@ -22,19 +22,17 @@ class DndView(View):
     when dispatching scheduled prompts to this user.
     """
 
-    VALID_VALUES = {"on", "off"}
-
     def post(self, request, *args, **kwargs):
         user = request.slack_integration.user
         text = request.slack_text.lower()
 
-        if text and text not in self.VALID_VALUES:
-            raise SlackCommandError("commands/dnd/invalid_value.json")
-
         if not text:
             text = "off" if user.respect_dnd else "on"
 
-        user.set_dnd(text)
+        try:
+            user.set_dnd(text)
+        except ValueError as ex:
+            raise SlackCommandError("commands/dnd/invalid_value.json") from ex
 
         return JsonTemplateLoader.ephemeral_response(
             "commands/dnd/success.json", value=text

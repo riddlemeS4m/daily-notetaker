@@ -37,7 +37,11 @@ class ModeView(View):
         if mode is None:
             raise SlackCommandError("commands/mode/invalid_mode.json")
 
-        old_mode = user.switch_mode(mode)
+        try:
+            old_mode = user.switch_mode(mode)
+        except ValueError as ex:
+            raise SlackCommandError("commands/mode/invalid_mode.json") from ex
+
         Session.close_all_open(user, chat_mode=old_mode)
 
         return JsonTemplateLoader.ephemeral_response(

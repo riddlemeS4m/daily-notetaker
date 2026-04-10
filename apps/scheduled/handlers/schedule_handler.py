@@ -51,7 +51,11 @@ class ScheduleHandler(SessionHandler):
         start = overrides.get("schedule_start", settings.SCHEDULE_START_HOUR)
         end = overrides.get("schedule_end", settings.SCHEDULE_END_HOUR)
         user_hour = datetime.now(ZoneInfo(tz_name)).hour
-        return start <= user_hour < end
+
+        if start <= end:
+            return start <= user_hour < end
+
+        return user_hour >= start or user_hour < end
 
     def is_dnd_blocked(self, user: User) -> bool:
         """
@@ -88,6 +92,7 @@ class ScheduleHandler(SessionHandler):
         """
         cutoff = timezone.now() - timedelta(hours=settings.PROMPT_INTERVAL_HOURS)
         count = Session.close_all_open(
-            chat_mode=ChatMode.SCHEDULED, stale_before=cutoff,
+            chat_mode=ChatMode.SCHEDULED,
+            stale_before=cutoff,
         )
         logger.info("Expired %s stale scheduled session(s)", count)

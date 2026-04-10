@@ -43,7 +43,10 @@ class ActivateView(View):
 
         Session.close_all_open(user)
 
-        user.activate(mode)
+        try:
+            user.activate(mode)
+        except ValueError as ex:
+            raise SlackCommandError("commands/activate/invalid_mode.json") from ex
 
         return JsonTemplateLoader.ephemeral_response(
             "commands/activate/success.json", mode=mode

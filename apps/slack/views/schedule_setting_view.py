@@ -33,9 +33,9 @@ class ScheduleSettingView(View):
         text = request.slack_text
 
         if not text:
-            current = getattr(integration, self.getter_attr) or getattr(
-                settings, self.default_setting
-            )
+            current = getattr(integration, self.getter_attr)
+            if current is None:
+                current = getattr(settings, self.default_setting)
             return JsonTemplateLoader.ephemeral_response(
                 "commands/schedules/current_value.json",
                 setting=self.setting_label,

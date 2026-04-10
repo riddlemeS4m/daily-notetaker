@@ -53,6 +53,7 @@ class Session(models.Model):
 
     @classmethod
     def open(cls, user: User, chat_mode: ChatMode | str) -> Session:
+        ChatMode.validate(chat_mode)
         return cls.objects.create(
             user=user, chat_mode=chat_mode, status=cls.Status.ACTIVE,
         )
@@ -71,6 +72,7 @@ class Session(models.Model):
     def find_or_create(
         cls, user: User, chat_mode: ChatMode | str,
     ) -> Session:
+        ChatMode.validate(chat_mode)
         with transaction.atomic():
             session = (
                 cls.objects
