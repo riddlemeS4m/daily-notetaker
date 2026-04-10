@@ -1,10 +1,16 @@
+import logging
+import time
 from typing import Any, override
 
 from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
+from apps.core.exceptions import ExternalServiceError
 from apps.core.services import JsonTemplateLoader, NotificationService
 from apps.slack.models import SlackIntegration
 from apps.users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class SlackNotificationService(NotificationService):
@@ -19,10 +25,21 @@ class SlackNotificationService(NotificationService):
     def __init__(self, token: str):
         self.client = WebClient(token=token)
         self._user_profile: dict[str, dict[str, Any]] = {}
+        self._integration: dict[int, SlackIntegration] = {}
+
+    def _get_integration(self, user: User) -> SlackIntegration:
+        if user.pk not in self._integration:
+            self._integration[user.pk] = SlackIntegration.for_user(user)
+        return self._integration[user.pk]
 
     def _fetch_user(self, external_id: str) -> dict[str, Any]:
         if external_id not in self._user_profile:
-            response = self.client.users_info(user=external_id)
+            try:
+                response = self.client.users_info(user=external_id)
+            except SlackApiError as exc:
+                raise ExternalServiceError(
+                    f"Slack users.info failed for {external_id}"
+                ) from exc
             self._user_profile[external_id] = response["user"]
         return self._user_profile[external_id]
 
@@ -38,7 +55,7 @@ class SlackNotificationService(NotificationService):
 
     @override
     def resolve_context(self, user: User) -> dict[str, Any]:
-        integration = SlackIntegration.for_user(user)
+        integration = self._get_integration(user)
         return {
             "channel": integration.slack_user_id,
         }
@@ -84,3 +101,29 @@ class SlackNotificationService(NotificationService):
             "external_id": event.get("user"),
             "content": event.get("text", "").strip(),
         }
+
+    @override
+    def is_dnd_active(self, user: User) -> bool:
+        integration = self._get_integration(user)
+        try:
+            resp = self.client.dnd_info(user=integration.slack_user_id)
+        except SlackApiError as exc:
+            raise ExternalServiceError(
+                f"Slack dnd.info failed for user {user.pk}"
+            ) from exc
+        if resp.get("snooze_enabled", False):
+            return True
+        now = time.time()
+        start = resp.get("next_dnd_start_ts", 0)
+        end = resp.get("next_dnd_end_ts", 0)
+        return start <= now < end
+
+    @override
+    def resolve_timezone(self, user: User) -> str:
+        integration = self._get_integration(user)
+        profile = self._fetch_user(integration.slack_user_id)
+        return profile.get("tz", "UTC")
+
+    @override
+    def resolve_schedule(self, user: User) -> dict[str, Any]:
+        return self._get_integration(user).schedule_overrides

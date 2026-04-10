@@ -32,7 +32,7 @@ class ErrorHandlingMiddleware:
                 request.path,
                 exception,
             )
-            return HttpResponse(status=exception.status_code)
+            return exception.to_response()
 
         logger.exception(
             "Unhandled exception on %s %s",

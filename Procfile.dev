@@ -1,0 +1,5 @@
+web: DEBUG=True python manage.py runserver 0.0.0.0:8000 --verbosity 3
+worker: celery -A config worker --loglevel=info
+beat: celery -A config beat --loglevel=debug
+flower: celery -A config flower --port=5555 --loglevel=info
+ngrok: ngrok http 8000 --log=stdout

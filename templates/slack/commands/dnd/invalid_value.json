@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Invalid option. Usage: `/dnd` (toggle) or `/dnd on` / `/dnd off`"
+    }
+  }
+]

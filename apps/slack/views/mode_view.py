@@ -5,10 +5,16 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.core.constants import ChatMode
 from apps.core.models import Session
 from apps.core.services import JsonTemplateLoader
-from apps.slack.decorators import require_slack_integration, verify_slack_signature
+from apps.slack.decorators import (
+    require_opted_in,
+    require_slack_integration,
+    verify_slack_signature,
+)
+from apps.slack.exceptions import SlackCommandError
+
 
 @method_decorator(
-    [csrf_exempt, verify_slack_signature, require_slack_integration],
+    [csrf_exempt, verify_slack_signature, require_slack_integration, require_opted_in],
     name="dispatch",
 )
 class ModeView(View):
@@ -20,13 +26,8 @@ class ModeView(View):
 
     def post(self, request, *args, **kwargs):
         user = request.slack_integration.user
+        text = request.slack_text
 
-        if not user.is_opted_in:
-            return JsonTemplateLoader.ephemeral_response(
-                "commands/mode/not_opted_in.json"
-            )
-
-        text = request.POST.get("text", "").strip()
         if not text:
             return JsonTemplateLoader.ephemeral_response(
                 "commands/mode/current_mode.json", mode=user.chat_mode
@@ -34,11 +35,13 @@ class ModeView(View):
 
         mode = ChatMode.parse(text)
         if mode is None:
-            return JsonTemplateLoader.ephemeral_response(
-                "commands/mode/invalid_mode.json"
-            )
+            raise SlackCommandError("commands/mode/invalid_mode.json")
 
-        old_mode = user.switch_mode(mode)
+        try:
+            old_mode = user.switch_mode(mode)
+        except ValueError as ex:
+            raise SlackCommandError("commands/mode/invalid_mode.json") from ex
+
         Session.close_all_open(user, chat_mode=old_mode)
 
         return JsonTemplateLoader.ephemeral_response(

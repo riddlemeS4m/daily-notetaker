@@ -1,0 +1,9 @@
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Invalid value for $setting. Please provide an hour between 0 and 23."
+    }
+  }
+]

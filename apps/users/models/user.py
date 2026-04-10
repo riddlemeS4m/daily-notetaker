@@ -22,7 +22,30 @@ class User(AbstractUser):
     def is_opted_in(self):
         return self.opted_in_at is not None and self.opted_out_at is None
 
+    @property
+    def respect_dnd(self) -> bool:
+        return self.metadata.get("dnd", "on") == "on"
+
+    VALID_DND_VALUES = {"on", "off"}
+
+    @staticmethod
+    def _validate_mode(mode: str) -> None:
+        ChatMode.validate(mode)
+
+    @classmethod
+    def _validate_dnd(cls, value: str) -> None:
+        if value not in cls.VALID_DND_VALUES:
+            raise ValueError(
+                f"DND value must be one of {cls.VALID_DND_VALUES}, got {value!r}"
+            )
+
+    def set_dnd(self, value: str) -> None:
+        self._validate_dnd(value)
+        self.metadata["dnd"] = value
+        self.save(update_fields=["metadata", "updated_at"])
+
     def activate(self, mode: str) -> None:
+        self._validate_mode(mode)
         self.chat_mode = mode
         self.opted_in_at = timezone.now()
         self.opted_out_at = None
@@ -36,6 +59,7 @@ class User(AbstractUser):
 
     def switch_mode(self, mode: str) -> str:
         """Switch chat mode, returning the previous mode."""
+        self._validate_mode(mode)
         old_mode = self.chat_mode
         self.chat_mode = mode
         self.save(update_fields=["chat_mode", "updated_at"])

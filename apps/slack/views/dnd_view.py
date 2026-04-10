@@ -2,31 +2,38 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.core.models import Session
 from apps.core.services import JsonTemplateLoader
 from apps.slack.decorators import (
     require_opted_in,
     require_slack_integration,
     verify_slack_signature,
 )
+from apps.slack.exceptions import SlackCommandError
 
 
 @method_decorator(
     [csrf_exempt, verify_slack_signature, require_slack_integration, require_opted_in],
     name="dispatch",
 )
-class DeactivateView(View):
+class DndView(View):
     """
-    Handles the /deactivate slash command.
-    Sets opted_out_at on the User, stopping further prompts.
+    Handles the /dnd [on|off] slash command.
+    Toggles or explicitly sets whether the app respects vendor DND
+    when dispatching scheduled prompts to this user.
     """
 
     def post(self, request, *args, **kwargs):
         user = request.slack_integration.user
+        text = request.slack_text.strip().lower()
 
-        user.deactivate()
-        Session.close_all_open(user)
+        if not text:
+            text = "off" if user.respect_dnd else "on"
+
+        try:
+            user.set_dnd(text)
+        except ValueError as ex:
+            raise SlackCommandError("commands/dnd/invalid_value.json") from ex
 
         return JsonTemplateLoader.ephemeral_response(
-            "commands/deactivate/success.json"
+            "commands/dnd/success.json", value=text
         )
