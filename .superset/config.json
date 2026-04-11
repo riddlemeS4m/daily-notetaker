@@ -1,0 +1,11 @@
+{
+    "setup": [
+        "chmod +x ./.superset/setup.sh && ./.superset/setup.sh"
+    ],
+    "teardown": [
+        "chmod +x ./.superset/teardown.sh && ./.superset/teardown.sh"
+    ],
+    "run": [
+        "chmod +x ./.superset/run.sh && ./.superset/run.sh"
+    ]
+}
